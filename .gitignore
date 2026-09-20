@@ -14,6 +14,10 @@ laporan.md
 panduan_text.txt
 *.before*
 
+# Notebook 3-kelas (eksperimen lama / fokus penelitian adalah klasifikasi biner)
+*3class*
+*3-kelas*
+
 # Model Weights (> 100MB GitHub limit, hosted on GitHub Releases)
 *.safetensors
 *.pt

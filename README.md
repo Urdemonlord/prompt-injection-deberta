@@ -1,7 +1,6 @@
 # 🛡️ Deteksi Prompt Injection Menggunakan DeBERTa-v3-base
 
-[![Open In Colab (Binary Pipeline)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Urdemonlord/prompt-injection-deberta/blob/master/deberta_binary_pipeline.ipynb)
-[![Open In Colab (3-Class Pipeline)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Urdemonlord/prompt-injection-deberta/blob/master/deberta_3class_pipeline.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Urdemonlord/prompt-injection-deberta/blob/master/deberta_binary_pipeline.ipynb)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
 ![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Transformers-yellow)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
@@ -40,7 +39,6 @@ Prompt injection adalah salah satu kerentanan keamanan paling kritis pada sistem
 ```text
 prompt-injection-deberta/
 ├── deberta_binary_pipeline.ipynb   # 🚀 Pipeline Colab utama (Klasifikasi Biner)
-├── deberta_3class_pipeline.ipynb   # 🚀 Pipeline Colab alternatif (3 Kelas)
 ├── baseline_fliprate_standalone.ipynb  # Notebook analisis Flip Rate
 ├── loso_fn_standalone.ipynb       # Notebook evaluasi LOSO & False Negative
 ├── gradio_demo_standalone.ipynb    # Demo Gradio standalone
@@ -72,8 +70,7 @@ Kamu bisa langsung menjalankan pipeline pelatihan dan pengujian di Google Colab 
 
 | Pipeline | Deskripsi | Link Colab |
 |---|---|---|
-| **Binary Pipeline (Utama)** | End-to-end data gathering, praproses, fine-tuning DeBERTa-v3-base biner, evaluasi held-out | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Urdemonlord/prompt-injection-deberta/blob/master/deberta_binary_pipeline.ipynb) |
-| **3-Class Pipeline** | Klasifikasi multi-kelas (*safe*, *prompt_injection*, *out_of_domain*) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Urdemonlord/prompt-injection-deberta/blob/master/deberta_3class_pipeline.ipynb) |
+| **Binary Pipeline (DeBERTa-v3-base)** | End-to-end data gathering, praproses, fine-tuning DeBERTa-v3-base biner, evaluasi held-out | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Urdemonlord/prompt-injection-deberta/blob/master/deberta_binary_pipeline.ipynb) |
 
 > 💡 **Tip**: Di Colab, gunakan runtime GPU (T4, L4, atau A100). Notebook otomatis mengenali environment Colab / Kaggle.
 
