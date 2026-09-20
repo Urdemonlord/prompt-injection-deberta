@@ -1,0 +1,47 @@
+# ==============================================================================
+# Gitignore for Prompt Injection Detection (DeBERTa-v3) Project
+# ==============================================================================
+
+# Private Academic Thesis & Draft Documents
+*.docx
+*.pdf
+*.tmp
+~$*
+generate-samaryn-proposal.mjs
+revisi/
+skripsi2paper/
+laporan.md
+panduan_text.txt
+*.before*
+
+# Model Weights (> 100MB GitHub limit, hosted on GitHub Releases)
+*.safetensors
+*.pt
+*.pth
+*.onnx
+*.h5
+best_model_biner/model.safetensors
+best_model_biner.zip
+
+# Large Datasets (> 100MB GitHub limit, hosted on GitHub Releases)
+train.csv
+dataset.zip
+
+# Checkpoints, Caches, Virtual Environments
+checkpoints/
+**/checkpoints/
+__pycache__/
+**/*__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+webapp/.git_backup/
+*.log
+
+# OS artifacts
+Thumbs.db
+.DS_Store
