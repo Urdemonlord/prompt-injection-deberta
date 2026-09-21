@@ -22,7 +22,13 @@ import os
 import re
 import unicodedata
 from pathlib import Path
-from typing import List
+import io
+import json
+import os
+import re
+import unicodedata
+from pathlib import Path
+from typing import List, Optional
 
 import torch
 import torch.nn.functional as F
@@ -32,6 +38,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+from multilingual import adapt_multilingual
 
 # ---------------------------------------------------------------------------
 # Konfigurasi
@@ -128,10 +136,12 @@ def _startup():
 # ---------------------------------------------------------------------------
 class PredictRequest(BaseModel):
     text: str
+    multilingual: bool = True
 
 
 class BatchRequest(BaseModel):
     texts: List[str] = Field(default_factory=list)
+    multilingual: bool = True
 
 
 class PredictResult(BaseModel):
@@ -139,16 +149,19 @@ class PredictResult(BaseModel):
     label: str
     confidence: float
     probabilities: dict
+    multilingual_info: Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
 # Inti inferensi (batched)
 # ---------------------------------------------------------------------------
 @torch.inference_mode()
-def classify_many(texts: List[str]) -> List[PredictResult]:
+def classify_many(texts: List[str], multilingual: bool = True) -> List[PredictResult]:
     if _model is None:
         raise HTTPException(503, "Model belum termuat. Periksa MODEL_PATH lalu restart server.")
-    clean = [preprocess(t) for t in texts]
+    multi_infos = [adapt_multilingual(t, enabled=multilingual) for t in texts]
+    adapted_texts = [m["adapted_text"] for m in multi_infos]
+    clean = [preprocess(t) for t in adapted_texts]
     out: List[PredictResult] = []
     for i in range(0, len(clean), 64):  # sub-batch agar hemat memori
         chunk = clean[i:i + 64]
@@ -163,6 +176,7 @@ def classify_many(texts: List[str]) -> List[PredictResult]:
                 confidence=round(float(row[pid]), 4),
                 probabilities={_labels.get(k, f"kelas {k}"): round(float(p), 4)
                                for k, p in enumerate(row)},
+                multilingual_info=multi_infos[i + j],
             ))
     return out
 
@@ -175,7 +189,7 @@ def predict(req: PredictRequest):
     text = (req.text or "").strip()
     if not text:
         raise HTTPException(400, "Teks masukan kosong.")
-    return classify_many([text])[0]
+    return classify_many([text], multilingual=req.multilingual)[0]
 
 
 @app.post("/predict_batch", response_model=List[PredictResult])
@@ -185,11 +199,11 @@ def predict_batch(req: BatchRequest):
         raise HTTPException(400, "Daftar teks kosong.")
     if len(texts) > MAX_BATCH:
         raise HTTPException(413, f"Maksimum {MAX_BATCH} teks per permintaan.")
-    return classify_many(texts)
+    return classify_many(texts, multilingual=req.multilingual)
 
 
 @app.post("/predict_file", response_model=List[PredictResult])
-async def predict_file(file: UploadFile = File(...)):
+async def predict_file(file: UploadFile = File(...), multilingual: bool = True):
     raw = (await file.read()).decode("utf-8", errors="replace")
     if file.filename and file.filename.lower().endswith(".csv"):
         import csv
@@ -203,7 +217,7 @@ async def predict_file(file: UploadFile = File(...)):
         raise HTTPException(400, "Berkas tidak memuat teks yang bisa diproses.")
     if len(texts) > MAX_BATCH:
         raise HTTPException(413, f"Maksimum {MAX_BATCH} baris per berkas.")
-    return classify_many(texts)
+    return classify_many(texts, multilingual=multilingual)
 
 
 def preprocess_trace(text: str):
@@ -253,7 +267,7 @@ def _pred_dict(logits_row, probs_row):
 @app.post("/analyze")
 @torch.inference_mode()
 def analyze(req: PredictRequest):
-    """Seperti /predict + jejak pipeline, occlusion importance, attention, dan
+    """Seperti /predict + jejak pipeline, multilingual adaptation, occlusion importance, attention, dan
     perbandingan prediksi teks mentah vs setelah praproses."""
     if _model is None:
         raise HTTPException(503, "Model belum termuat. Periksa MODEL_PATH lalu restart server.")
@@ -261,7 +275,11 @@ def analyze(req: PredictRequest):
     if not text:
         raise HTTPException(400, "Teks masukan kosong.")
 
-    steps, clean = preprocess_trace(text)
+    # --- LANGKAH 0: Lapisan Adaptasi Multibahasa ---
+    multi_info = adapt_multilingual(text, enabled=req.multilingual)
+    target_text = multi_info["adapted_text"]
+
+    steps, clean = preprocess_trace(target_text)
 
     # Tokenisasi penuh (tanpa truncation) untuk hitung token sebenarnya
     ids_full = _tokenizer(clean, add_special_tokens=True, truncation=False)["input_ids"]
@@ -307,6 +325,7 @@ def analyze(req: PredictRequest):
 
     return {
         "text": text,
+        "multilingual": multi_info,
         "preprocessed": clean,
         "steps": steps,
         "tokens": tokens,
