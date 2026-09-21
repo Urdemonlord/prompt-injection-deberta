@@ -428,6 +428,8 @@ function renderPipeline(d){
   const cmp=(rawP&&clP)?`<div class="pp-row" style="margin-top:12px"><span class="pp-name">Efek praproses ke prediksi</span>${d.preproc_changed_prediction?'<span class="pp-badge changed">label berubah</span>':'<span class="pp-badge">label sama</span>'}</div>
       <div class="cmp">${cmpBox('Teks mentah',rawP)}<span class="cmp-arrow">→</span>${cmpBox('Setelah praproses',clP)}</div>`:'';
   // Lapisan adaptasi multibahasa (bila aktif & benar-benar menerjemahkan)
+  const u=mi.union||{};
+  const unionNote=u.applied?`<div class="warn" style="border-color:var(--accent);background:rgba(120,120,255,.08)">🛡 <b>Aturan gabungan (union):</b> teks dianggap <b>injection</b> bila teks <b>asli</b> atau <b>terjemahan</b> terdeteksi injeksi. Translator hanya bisa menambah deteksi, tidak menghapus. Prediksi akhir diambil dari <b>${u.source==='raw'?'teks asli':'hasil terjemahan'}</b>.</div>`:'';
   const mtSection=mi.is_translated?`<div class="step"><div class="num">0</div>
         <h4>Adaptasi multibahasa <small>${esc(mi.lang_name||mi.detected_lang||"")} → Inggris</small></h4>
         <p class="pl-sub">Teks diterjemahkan ke Bahasa Inggris sebelum praproses, agar pola injeksi dikenali.</p>
@@ -435,6 +437,7 @@ function renderPipeline(d){
         <div class="textbox">${esc(mi.original_text||"")}</div>
         <div class="pp-row"><span class="pp-name">Hasil terjemahan <span class="pp-badge changed">${esc(mi.status||"")}</span></span></div>
         <div class="textbox">${esc(mi.adapted_text||"")}</div>
+        ${unionNote}
       </div>`:'';
   $("pipeline").innerHTML=`
     <div class="pl-head" id="plToggle">${ico} Bagaimana teks ini diproses? ${chev}</div>

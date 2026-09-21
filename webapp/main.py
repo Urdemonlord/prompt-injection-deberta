@@ -156,28 +156,55 @@ class PredictResult(BaseModel):
 # Inti inferensi (batched)
 # ---------------------------------------------------------------------------
 @torch.inference_mode()
+def _probs(texts: List[str]):
+    """Softmax probabilitas untuk sekumpulan teks (sub-batch agar hemat memori)."""
+    rows = []
+    for i in range(0, len(texts), 64):
+        chunk = texts[i:i + 64]
+        enc = _tokenizer(chunk, truncation=True, max_length=MAX_LENGTH,
+                         padding=True, return_tensors="pt").to(DEVICE)
+        rows.append(F.softmax(_model(**enc).logits, dim=-1))
+    return torch.cat(rows, dim=0)
+
+
+@torch.inference_mode()
 def classify_many(texts: List[str], multilingual: bool = True) -> List[PredictResult]:
     if _model is None:
         raise HTTPException(503, "Model belum termuat. Periksa MODEL_PATH lalu restart server.")
     multi_infos = [adapt_multilingual(t, enabled=multilingual) for t in texts]
-    adapted_texts = [m["adapted_text"] for m in multi_infos]
-    clean = [preprocess(t) for t in adapted_texts]
+    raw_clean = [preprocess(t) for t in texts]
+    ad_clean = [preprocess(m["adapted_text"]) for m in multi_infos]
+
+    # Satu forward pass untuk kedua jalur: teks asli (0..n-1) lalu hasil terjemahan (n..2n-1).
+    all_probs = _probs(raw_clean + ad_clean)
+    n = len(texts)
+    inj_id = _inj_id()
+    inj_label = _labels.get(inj_id, "prompt injection")
+
     out: List[PredictResult] = []
-    for i in range(0, len(clean), 64):  # sub-batch agar hemat memori
-        chunk = clean[i:i + 64]
-        enc = _tokenizer(chunk, truncation=True, max_length=MAX_LENGTH,
-                         padding=True, return_tensors="pt").to(DEVICE)
-        probs = F.softmax(_model(**enc).logits, dim=-1)
-        for j, row in enumerate(probs):
-            pid = int(torch.argmax(row).item())
-            out.append(PredictResult(
-                text=texts[i + j],
-                label=_labels.get(pid, f"kelas {pid}"),
-                confidence=round(float(row[pid]), 4),
-                probabilities={_labels.get(k, f"kelas {k}"): round(float(p), 4)
-                               for k, p in enumerate(row)},
-                multilingual_info=multi_infos[i + j],
-            ))
+    for i in range(n):
+        info = dict(multi_infos[i])
+        translated = bool(info.get("is_translated"))
+        if translated:
+            # Aturan union: injeksi menang. Translator hanya boleh MENAMBAH deteksi,
+            # tidak boleh menghapus deteksi yang sudah ada pada teks asli.
+            c = _pick_union(all_probs, [i, n + i], inj_id)
+            chosen = all_probs[c]
+            info["union"] = {"applied": True, "rule": "union",
+                             "source": "raw" if c == i else "translated",
+                             "raw_label": _labels.get(int(torch.argmax(all_probs[i]).item()), "?"),
+                             "translated_label": _labels.get(int(torch.argmax(all_probs[n + i]).item()), "?")}
+        else:
+            chosen = all_probs[i]
+        pid = int(torch.argmax(chosen).item())
+        out.append(PredictResult(
+            text=texts[i],
+            label=_labels.get(pid, f"kelas {pid}"),
+            confidence=round(float(chosen[pid]), 4),
+            probabilities={_labels.get(k, f"kelas {k}"): round(float(p), 4)
+                           for k, p in enumerate(chosen)},
+            multilingual_info=info,
+        ))
     return out
 
 
@@ -264,6 +291,40 @@ def _pred_dict(logits_row, probs_row):
     }
 
 
+def _inj_id() -> int:
+    """Indeks kelas injeksi pada _labels (fallback: kelas terakhir)."""
+    for k, v in _labels.items():
+        if "inject" in str(v).lower():
+            return int(k)
+    return max(_labels) if _labels else 1
+
+
+def _pick_union(probs, cands, inj_id):
+    """Pilih kandidat pemenang dengan aturan union.
+
+    Bila ada kandidat berlabel injeksi, ambil yang probabilitas injeksinya tertinggi
+    (hasil akhir = injeksi). Bila semua kandidat aman, ambil yang probabilitas
+    injeksinya TERENDAH (yakni 'aman' tertinggi) agar keyakinan yang tampil tetap tinggi.
+    """
+    inj_cands = [c for c in cands if int(torch.argmax(probs[c]).item()) == inj_id]
+    if inj_cands:
+        return max(inj_cands, key=lambda c: float(probs[c][inj_id]))
+    return min(cands, key=lambda c: float(probs[c][inj_id]))
+
+
+def _union_preds(a, b, inj_label):
+    """Gabungkan dua prediksi dengan aturan union (injeksi menang).
+
+    Return (prediksi terpilih, sumber) dengan sumber 'raw' atau 'translated'.
+    """
+    a_inj = a["label"] == inj_label
+    b_inj = b["label"] == inj_label
+    if a_inj != b_inj:
+        return (a, "raw") if a_inj else (b, "translated")
+    # Kedua jalur sepakat: tampilkan yang keyakinannya lebih tinggi.
+    return (a, "raw") if a["confidence"] >= b["confidence"] else (b, "translated")
+
+
 @app.post("/analyze")
 @torch.inference_mode()
 def analyze(req: PredictRequest):
@@ -296,6 +357,20 @@ def analyze(req: PredictRequest):
     logits_r, probs_r, _, _ = _run([text])
     pred_raw = _pred_dict(logits_r[0], probs_r[0])
     pred_clean = _pred_dict(logits1, probs1)
+
+    # --- #4 Aturan union: injeksi menang (translator tak boleh menghapus deteksi) ---
+    inj_id = _inj_id()
+    inj_label = _labels.get(inj_id, "prompt injection")
+    translated = bool(multi_info.get("is_translated"))
+    if translated:
+        chosen, source = _union_preds(pred_raw, pred_clean, inj_label)
+        multi_info = dict(multi_info)
+        multi_info["union"] = {
+            "applied": True, "rule": "union", "source": source,
+            "raw_label": pred_raw["label"], "translated_label": pred_clean["label"],
+        }
+    else:
+        chosen, source = pred_clean, "translated"
 
     # --- #2 Attention [CLS] -> token (rata-rata head, lapisan terakhir) ---
     attention = []
@@ -334,11 +409,12 @@ def analyze(req: PredictRequest):
         "max_length": MAX_LENGTH,
         "truncated": truncated,
         "logits": {_labels.get(k, f"kelas {k}"): round(float(v), 4) for k, v in enumerate(logits1)},
-        "probabilities": pred_clean["probabilities"],
-        "label": pred_clean["label"],
-        "confidence": pred_clean["confidence"],
+        "probabilities": chosen["probabilities"],
+        "label": chosen["label"],
+        "confidence": chosen["confidence"],
         "pred_raw": pred_raw,
         "pred_clean": pred_clean,
+        "pred_final_source": source,
         "preproc_changed_prediction": pred_raw["label"] != pred_clean["label"],
         "attention": attention,
         "importance": importance,

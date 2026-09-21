@@ -91,6 +91,9 @@ curl -s -X POST https://promptcheck.meowlabs.id/predict \
 - Panel pipeline menampilkan **step 0 "Adaptasi multibahasa"** (teks asli → hasil terjemahan);
   step 1 lalu menampilkan input yang benar-benar masuk praproses (hasil terjemahan bila ada).
 - Toggle otomatis **nonaktif** bila server tidak mengekspos `translation_backend` di `/health`.
+- **Aturan gabungan (union)**: teks dianggap injeksi bila teks **asli ATAU terjemahan** terdeteksi
+  injeksi. Translator hanya boleh menambah deteksi, tidak menghapus — mencegah *false negative*
+  akibat terjemahan yang mengubah makna. Field `multilingual_info.union` mencatat sumber prediksi.
 
 ## Pemeliharaan disk
 Image ~3.3 GB per versi. Jangan menyimpan backup lebih dari satu; setelah versi baru
