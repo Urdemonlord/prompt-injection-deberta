@@ -74,6 +74,21 @@
   .chip{font-size:.76rem;padding:6px 11px;border-radius:999px;border:1px solid var(--line);
         background:var(--card2);color:var(--muted);cursor:pointer;font-family:inherit;transition:.15s}
   .chip:hover{color:var(--text);border-color:var(--accent)}
+  /* toggle multibahasa */
+  .mtoggle{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;color:var(--muted);
+           padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);
+           cursor:pointer;font-family:inherit;transition:.15s;user-select:none;white-space:nowrap}
+  .mtoggle:hover{color:var(--text);border-color:var(--accent)}
+  .mtoggle .globe{width:14px;height:14px;flex:none}
+  .mtoggle .sw{width:28px;height:16px;border-radius:999px;background:var(--line);position:relative;
+               transition:.18s;flex:none}
+  .mtoggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;
+                      background:var(--muted);transition:.18s}
+  .mtoggle[aria-pressed="true"]{color:var(--text);border-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+  .mtoggle[aria-pressed="true"] .sw{background:var(--accent)}
+  .mtoggle[aria-pressed="true"] .sw::after{left:14px;background:#fff}
+  .mtoggle[disabled]{opacity:.5;cursor:not-allowed}
+  @media(max-width:600px){.mtoggle .mlabel{display:none}}
   .count{font-size:.76rem;color:var(--muted)}
   .row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
   button.btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));
@@ -250,6 +265,10 @@
     <div class="row">
       <button id="btn" class="btn">Deteksi</button>
       <button id="clear" class="btn ghost">Bersihkan</button>
+      <button id="mtSingle" class="mtoggle" type="button" aria-pressed="true" title="Terjemahkan teks non-Inggris ke Inggris sebelum deteksi">
+        <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="mlabel">Multibahasa</span><span class="sw"></span>
+      </button>
       <input id="file" type="file" accept=".txt" hidden />
       <span class="count">Ctrl+Enter untuk deteksi cepat</span>
     </div>
@@ -272,6 +291,10 @@
       <button id="dl" class="btn ghost" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Unduh CSV</button>
+      <button id="mtBatch" class="mtoggle" type="button" aria-pressed="true" title="Terjemahkan teks non-Inggris ke Inggris sebelum deteksi">
+        <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="mlabel">Multibahasa</span><span class="sw"></span>
+      </button>
       <input id="fileB" type="file" accept=".txt,.csv" hidden />
       <span class="count">maks. baris per proses dibatasi server</span>
     </div>
@@ -301,13 +324,37 @@ $("themeBtn").addEventListener("click",()=>{
 });
 
 /* ---------- status & info model ---------- */
+let mtReady=false;               // backend terjemahan lokal siap?
 fetch("/health").then(r=>r.json()).then(d=>{
   const s=$("status");
   if(d.model_loaded){ $("statusText").textContent="model aktif · "+(d.device||"cpu"); s.className="status ok"; }
   else { $("statusText").textContent="model belum termuat"; s.className="status bad"; }
   const params=d.parameters?(d.parameters/1e6).toFixed(0)+"M param":"";
-  $("modelInfo").textContent=[d.model_name||"DeBERTa-v3-base",params,(d.device||"").toUpperCase(),"maks "+(d.max_length||192)+" token"].filter(Boolean).join(" · ");
+  const tb=d.translation_backend;
+  // Ketersediaan = server mengekspos lapisan multibahasa (kunci translation_backend ada).
+  // Jangan bergantung pada `loaded` (lazy) maupun model lokal: bila MT lokal mati,
+  // lapisan masih bisa jalan lewat Google/fallback.
+  mtReady=!!tb;
+  const mtTxt=!tb?"":(tb.enabled&&tb.dir_exists?(tb.loaded?" · MT lokal siap":" · MT lokal tersedia"):" · MT");
+  $("modelInfo").textContent=[d.model_name||"DeBERTa-v3-base",params,(d.device||"").toUpperCase(),"maks "+(d.max_length||192)+" token"].filter(Boolean).join(" · ")+mtTxt;
+  syncMtUI();
 }).catch(()=>{ $("statusText").textContent="server tidak terjangkau"; $("status").className="status bad"; });
+
+/* ---------- toggle multibahasa ---------- */
+let mtEnabled=true;              // default sesuai API (true)
+function syncMtUI(){
+  document.querySelectorAll(".mtoggle").forEach(b=>{
+    b.setAttribute("aria-pressed", mtEnabled?"true":"false");
+    b.disabled=!mtReady;         // nonaktif bila backend MT tidak tersedia
+    b.title=mtReady
+      ? "Terjemahkan teks non-Inggris ke Inggris sebelum deteksi"
+      : "Translator lokal tidak tersedia di server";
+  });
+}
+document.querySelectorAll(".mtoggle").forEach(b=>b.addEventListener("click",()=>{
+  if(!mtReady)return;            // jangan biarkan aktif bila backend mati
+  mtEnabled=!mtEnabled; syncMtUI();
+}));
 
 /* ---------- tabs ---------- */
 document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
@@ -347,7 +394,7 @@ async function predictOne(){
   $("btn").disabled=true;$("btn").innerHTML=spin;
   const t0=performance.now();
   try{
-    const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t})});
+    const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t,multilingual:mtEnabled})});
     const d=await res.json(); if(!res.ok)throw new Error(d.detail||"Gagal memproses.");
     renderOne(d, Math.round(performance.now()-t0));
     renderPipeline(d);
@@ -362,7 +409,10 @@ function tokChip(t,id){
   return `<span class="tok${special?' special':''}" title="${esc(t)} · id ${id}">${disp}</span>`;
 }
 function renderPipeline(d){
-  const changedAny = d.preprocessed !== d.text;
+  const mi=d.multilingual||{};
+  // Input yang benar-benar masuk praproses: hasil terjemahan bila ada, jika tidak teks asli.
+  const inputText=(mi.is_translated&&mi.adapted_text)?mi.adapted_text:d.text;
+  const changedAny = d.preprocessed !== inputText;
   const stepRows = (d.steps||[]).map(s=>`<div class="pp-row"><span class="pp-name">${s.name}</span>
       <span class="pp-badge ${s.changed?'changed':''}">${s.changed?'diubah':'tetap'}</span></div>`).join("");
   const M=d.max_length, N=d.num_tokens, w=Math.min(100, N/M*100).toFixed(1);
@@ -377,14 +427,24 @@ function renderPipeline(d){
   const cmpBox=(title,pd)=>{const inj=isInj(pd.label);return `<div class="box"><div class="t">${title}</div><div class="l ${inj?'danger':'safe'}">${pd.label}</div><div class="p">${(pd.confidence*100).toFixed(2)}% keyakinan</div></div>`;};
   const cmp=(rawP&&clP)?`<div class="pp-row" style="margin-top:12px"><span class="pp-name">Efek praproses ke prediksi</span>${d.preproc_changed_prediction?'<span class="pp-badge changed">label berubah</span>':'<span class="pp-badge">label sama</span>'}</div>
       <div class="cmp">${cmpBox('Teks mentah',rawP)}<span class="cmp-arrow">→</span>${cmpBox('Setelah praproses',clP)}</div>`:'';
+  // Lapisan adaptasi multibahasa (bila aktif & benar-benar menerjemahkan)
+  const mtSection=mi.is_translated?`<div class="step"><div class="num">0</div>
+        <h4>Adaptasi multibahasa <small>${esc(mi.lang_name||mi.detected_lang||"")} → Inggris</small></h4>
+        <p class="pl-sub">Teks diterjemahkan ke Bahasa Inggris sebelum praproses, agar pola injeksi dikenali.</p>
+        <div class="pp-row"><span class="pp-name">Teks asli</span></div>
+        <div class="textbox">${esc(mi.original_text||"")}</div>
+        <div class="pp-row"><span class="pp-name">Hasil terjemahan <span class="pp-badge changed">${esc(mi.status||"")}</span></span></div>
+        <div class="textbox">${esc(mi.adapted_text||"")}</div>
+      </div>`:'';
   $("pipeline").innerHTML=`
     <div class="pl-head" id="plToggle">${ico} Bagaimana teks ini diproses? ${chev}</div>
     <div class="pl-body">
       <p class="pl-sub">Pipeline identik dengan pelatihan: praproses → tokenisasi → DeBERTa-v3 → softmax.</p>
+      ${mtSection}
       <div class="step"><div class="num">1</div>
         <h4>Praproses <small>${changedAny?'teks dinormalisasi':'tidak ada perubahan'}</small></h4>
-        <div class="pp-row"><span class="pp-name">Teks asli</span></div>
-        <div class="textbox">${esc(d.text)}</div>
+        <div class="pp-row"><span class="pp-name">${(mi.is_translated&&mi.adapted_text)?'Masukan praproses (hasil terjemahan)':'Teks asli'}</span></div>
+        <div class="textbox">${esc(inputText)}</div>
         ${stepRows}
         ${changedAny?`<div class="pp-row"><span class="pp-name">Hasil praproses</span></div><div class="textbox">${esc(d.preprocessed)}</div>`:''}
         ${cmp}
@@ -508,8 +568,8 @@ $("btnB").addEventListener("click",()=>{
   if(!lines.length){showErr("errB","Belum ada teks. Isi minimal satu baris atau unggah berkas.");return;}
   sendBatch(lines);
 });
-async function sendBatch(texts){ await run(()=>fetch("/predict_batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texts})})); }
-async function sendFile(f){ const fd=new FormData();fd.append("file",f); await run(()=>fetch("/predict_file",{method:"POST",body:fd})); }
+async function sendBatch(texts){ await run(()=>fetch("/predict_batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texts,multilingual:mtEnabled})})); }
+async function sendFile(f){ const fd=new FormData();fd.append("file",f);fd.append("multilingual",mtEnabled?"true":"false"); await run(()=>fetch("/predict_file",{method:"POST",body:fd})); }
 async function run(call){
   showErr("errB","");$("btnB").disabled=true;$("btnB").innerHTML=spin;
   try{

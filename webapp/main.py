@@ -32,7 +32,7 @@ from typing import List, Optional
 
 import torch
 import torch.nn.functional as F
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -203,7 +203,7 @@ def predict_batch(req: BatchRequest):
 
 
 @app.post("/predict_file", response_model=List[PredictResult])
-async def predict_file(file: UploadFile = File(...), multilingual: bool = True):
+async def predict_file(file: UploadFile = File(...), multilingual: bool = Form(True)):
     raw = (await file.read()).decode("utf-8", errors="replace")
     if file.filename and file.filename.lower().endswith(".csv"):
         import csv
