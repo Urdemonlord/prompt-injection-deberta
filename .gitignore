@@ -31,6 +31,9 @@ best_model_biner.zip
 train.csv
 dataset.zip
 
+# Model terjemahan lokal (MarianMT, ~300MB — diunduh via download_mt_model.py)
+mt_model/
+
 # Checkpoints, Caches, Virtual Environments
 checkpoints/
 **/checkpoints/

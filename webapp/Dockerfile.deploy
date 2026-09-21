@@ -1,0 +1,30 @@
+# Deploy: deteksi prompt injection (DeBERTa-v3-base biner) — torch CPU-only
+FROM python:3.10-slim
+
+WORKDIR /app
+
+ENV HF_HOME=/tmp/hf \
+    MODEL_PATH=/app/best_model_biner \
+    PYTHONUNBUFFERED=1
+
+# torch CPU-only (hindari menarik paket CUDA ~3GB)
+RUN pip install --no-cache-dir torch \
+      --index-url https://download.pytorch.org/whl/cpu \
+      --extra-index-url https://pypi.org/simple
+
+COPY webapp/requirements-deploy.txt .
+RUN pip install --no-cache-dir -r requirements-deploy.txt
+
+# Kode webapp + model biner
+COPY webapp/main.py ./
+COPY webapp/multilingual.py ./
+COPY webapp/mt_local.py ./
+COPY webapp/static/ ./static/
+COPY best_model_biner/ ./best_model_biner/
+
+# Model terjemahan lokal (MarianMT). Di-copy dari host; jalankan
+# `python3 download_mt_model.py` dulu bila folder belum ada.
+COPY mt_model/ ./mt_model/
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -349,9 +349,15 @@ def analyze(req: PredictRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model_loaded": _model is not None,
-            "device": DEVICE, "labels": _labels, "max_length": MAX_LENGTH,
-            "parameters": _num_params, "model_name": _model_name}
+    out = {"status": "ok", "model_loaded": _model is not None,
+           "device": DEVICE, "labels": _labels, "max_length": MAX_LENGTH,
+           "parameters": _num_params, "model_name": _model_name}
+    try:
+        import mt_local
+        out["translation_backend"] = mt_local.status()
+    except Exception:  # noqa: BLE001
+        out["translation_backend"] = {"enabled": False, "loaded": False}
+    return out
 
 
 # ---------------------------------------------------------------------------

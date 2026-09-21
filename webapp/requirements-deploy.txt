@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+pydantic>=2.5
+transformers>=4.40
+sentencepiece>=0.1.99
+protobuf>=3.20

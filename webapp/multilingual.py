@@ -11,6 +11,11 @@ import urllib.parse
 import urllib.request
 from typing import Dict, Optional, Tuple
 
+try:
+    import mt_local
+except Exception:  # noqa: BLE001
+    mt_local = None
+
 # Pemetaan kode bahasa ke nama & bendera representasi
 LANG_MAP = {
     "id": "🇮🇩 Bahasa Indonesia",
@@ -58,10 +63,24 @@ def translate_text(text: str, target_lang: str = "en", timeout_sec: float = 3.5)
     """
     Menerjemahkan teks ke target_lang dan mendeteksi bahasa asal.
     Mengembalikan (teks_terjemahan, kode_bahasa, status).
+
+    Urutan backend:
+      1. Model lokal (MarianMT)  -> status "local_mt"
+      2. Google Translate publik -> status "adapted"
+      3. Fallback heuristik      -> status "offline_fallback"
     """
     cleaned = (text or "").strip()
     if not cleaned:
         return cleaned, "en", "empty"
+
+    # --- 1) Backend terjemahan lokal (self-hosted) ---
+    if mt_local is not None and mt_local.local_available():
+        translated = mt_local.translate_to_en(cleaned)
+        if translated:
+            lang_code = _heuristic_detect(cleaned)
+            if translated.lower() != cleaned.lower():
+                return translated, lang_code, "local_mt"
+            return cleaned, lang_code, "local_mt_passthrough"
 
     url = (
         "https://translate.googleapis.com/translate_a/single?"
@@ -106,18 +125,21 @@ def adapt_multilingual(text: str, enabled: bool = True) -> Dict:
     translated, lang_code, status = translate_text(original, target_lang="en")
     lang_name = LANG_MAP.get(lang_code, f"🌐 {lang_code.upper()}")
 
-    # Jika bahasa terdeteksi sudah bahasa Inggris
-    if lang_code == "en" and status != "offline_fallback":
+    # Backend yang menandakan terjemahan benar-benar berhasil
+    TRANSLATED_STATUSES = {"adapted", "local_mt"}
+
+    # Bahasa sudah Inggris dan tidak ada terjemahan -> lewatkan apa adanya
+    if lang_code == "en" and status not in TRANSLATED_STATUSES:
         return {
             "original_text": original,
             "adapted_text": original,
             "detected_lang": "en",
             "lang_name": LANG_MAP.get("en", "🇬🇧 English"),
             "is_translated": False,
-            "status": "passthrough",
+            "status": "passthrough" if status.startswith("local_mt") else status,
         }
 
-    is_translated = (status == "adapted" and translated.lower() != original.lower())
+    is_translated = status in TRANSLATED_STATUSES and translated.lower() != original.lower()
 
     return {
         "original_text": original,
@@ -125,5 +147,5 @@ def adapt_multilingual(text: str, enabled: bool = True) -> Dict:
         "detected_lang": lang_code,
         "lang_name": lang_name,
         "is_translated": is_translated,
-        "status": status if is_translated else ("passthrough" if status == "adapted" else status),
+        "status": status if is_translated else "passthrough",
     }
