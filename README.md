@@ -138,7 +138,7 @@ print(f"Hasil: {model.config.id2label[label_id]} (Keyakinan: {probs[0][label_id]
 ## 🌐 Aplikasi Web (FastAPI)
 
 Aplikasi web siap produksi untuk pengujian real-time teks tunggal maupun batch upload file `.csv`/`.txt`:
-
+https://promptcheck.meowlabs.id/
 ![Web App Preview](gambar_web_dark.png)
 
 ### Menjalankan secara Lokal:
