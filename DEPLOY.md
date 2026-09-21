@@ -86,7 +86,11 @@ curl -s -X POST https://promptcheck.meowlabs.id/predict \
   `MT_MAX_NEW_TOKENS` (`256`).
 - **Catatan kosmetik**: `detected_lang` hanya membedakan `id`/`en` (heuristik kata kunci),
   jadi teks Prancis/Jerman/dll tampil sebagai `en` walau terjemahannya benar.
-- Frontend (`static/index.html`) **belum** punya toggle multibahasa — fitur ini hanya lewat API.
+- Frontend kini punya **toggle "Multibahasa"** (ikon globe + switch) di kedua tab
+  (Satu teks & Batch/Berkas). Bila dimatikan, parameter `multilingual:false` dikirim ke API.
+- Panel pipeline menampilkan **step 0 "Adaptasi multibahasa"** (teks asli → hasil terjemahan);
+  step 1 lalu menampilkan input yang benar-benar masuk praproses (hasil terjemahan bila ada).
+- Toggle otomatis **nonaktif** bila server tidak mengekspos `translation_backend` di `/health`.
 
 ## Pemeliharaan disk
 Image ~3.3 GB per versi. Jangan menyimpan backup lebih dari satu; setelah versi baru
