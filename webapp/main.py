@@ -173,29 +173,36 @@ def classify_many(texts: List[str], multilingual: bool = True) -> List[PredictRe
         raise HTTPException(503, "Model belum termuat. Periksa MODEL_PATH lalu restart server.")
     multi_infos = [adapt_multilingual(t, enabled=multilingual) for t in texts]
     raw_clean = [preprocess(t) for t in texts]
-    ad_clean = [preprocess(m["adapted_text"]) for m in multi_infos]
 
-    # Satu forward pass untuk kedua jalur: teks asli (0..n-1) lalu hasil terjemahan (n..2n-1).
-    all_probs = _probs(raw_clean + ad_clean)
-    n = len(texts)
+    # Jalur terjemahan hanya dijalankan bila ada teks yang benar-benar diterjemahkan.
+    # Sebelumnya raw+adapted selalu di-forward bersama (2N teks) walau multilingual=False,
+    # yang menaikkan peak memori 2x dan mencetuskan container ke OOM-kill -> 502.
+    translated_idx = [i for i, m in enumerate(multi_infos) if m.get("is_translated")]
+    ad_probs: dict = {}
+    if translated_idx:
+        ad_probs = dict(zip(
+            translated_idx,
+            _probs([preprocess(multi_infos[i]["adapted_text"]) for i in translated_idx]),
+        ))
+    raw_probs = _probs(raw_clean)
     inj_id = _inj_id()
-    inj_label = _labels.get(inj_id, "prompt injection")
 
     out: List[PredictResult] = []
-    for i in range(n):
+    for i in range(len(texts)):
         info = dict(multi_infos[i])
-        translated = bool(info.get("is_translated"))
-        if translated:
+        if i in ad_probs:
             # Aturan union: injeksi menang. Translator hanya boleh MENAMBAH deteksi,
             # tidak boleh menghapus deteksi yang sudah ada pada teks asli.
-            c = _pick_union(all_probs, [i, n + i], inj_id)
-            chosen = all_probs[c]
+            cand = [raw_probs[i], ad_probs[i]]
+            c = cand[0] if torch.argmax(cand[0]).item() == inj_id else (
+                cand[1] if torch.argmax(cand[1]).item() == inj_id else cand[0])
+            chosen = c
             info["union"] = {"applied": True, "rule": "union",
-                             "source": "raw" if c == i else "translated",
-                             "raw_label": _labels.get(int(torch.argmax(all_probs[i]).item()), "?"),
-                             "translated_label": _labels.get(int(torch.argmax(all_probs[n + i]).item()), "?")}
+                             "source": "raw" if c is cand[0] else "translated",
+                             "raw_label": _labels.get(int(torch.argmax(raw_probs[i]).item()), "?"),
+                             "translated_label": _labels.get(int(torch.argmax(ad_probs[i]).item()), "?")}
         else:
-            chosen = all_probs[i]
+            chosen = raw_probs[i]
         pid = int(torch.argmax(chosen).item())
         out.append(PredictResult(
             text=texts[i],

@@ -341,7 +341,9 @@ fetch("/health").then(r=>r.json()).then(d=>{
 }).catch(()=>{ $("statusText").textContent="server tidak terjangkau"; $("status").className="status bad"; });
 
 /* ---------- toggle multibahasa ---------- */
-let mtEnabled=true;              // default sesuai API (true)
+// Default false: lapisan MT memuat MarianMT (~1.1 GB peak) dan sebelumnya
+// mencetuskan container ke OOM-kill -> 502 -> HTML -> "Unexpected token '<'".
+let mtEnabled=false;
 function syncMtUI(){
   document.querySelectorAll(".mtoggle").forEach(b=>{
     b.setAttribute("aria-pressed", mtEnabled?"true":"false");
@@ -374,6 +376,16 @@ function bindDrop(zone,target){
 function readInto(f,target){const r=new FileReader();r.onload=()=>{target.value=r.result;target.dispatchEvent(new Event("input"));};r.readAsText(f);}
 function isInj(l){return l.toLowerCase().includes("inject");}
 function showErr(id,msg){const e=$(id);e.textContent=msg;e.classList.toggle("show",!!msg);}
+// 502/504 dari nginx atau Cloudflare mengembalikan HTML, bukan JSON.
+// res.json() lalu melempar "Unexpected token '<'" yang menutupi sebab sebenarnya.
+async function readJson(res){
+  const raw=await res.text();
+  try{return JSON.parse(raw);}
+  catch{
+    throw new Error(`Layanan tidak mengembalikan JSON (HTTP ${res.status}). `
+      +"Server mungkin sedang restart — coba lagi beberapa detik.");
+  }
+}
 const spin='<span class="spinner"></span> Memproses…';
 
 /* ---------- SINGLE ---------- */
@@ -395,7 +407,7 @@ async function predictOne(){
   const t0=performance.now();
   try{
     const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t,multilingual:mtEnabled})});
-    const d=await res.json(); if(!res.ok)throw new Error(d.detail||"Gagal memproses.");
+    const d=await readJson(res); if(!res.ok)throw new Error(d.detail||"Gagal memproses.");
     renderOne(d, Math.round(performance.now()-t0));
     renderPipeline(d);
     renderInterp(d);
@@ -576,7 +588,7 @@ async function sendFile(f){ const fd=new FormData();fd.append("file",f);fd.appen
 async function run(call){
   showErr("errB","");$("btnB").disabled=true;$("btnB").innerHTML=spin;
   try{
-    const res=await call(); const d=await res.json();
+    const res=await call(); const d=await readJson(res);
     if(!res.ok)throw new Error(d.detail||"Gagal memproses.");
     lastResults=d; renderTable(d);
   }catch(err){showErr("errB",err.message);$("tableWrap").innerHTML="";$("summary").classList.add("hidden");$("dl").disabled=true;}

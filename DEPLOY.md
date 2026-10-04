@@ -38,8 +38,17 @@ docker build -t prompt-check-app:latest -f webapp/Dockerfile.deploy .
 # swap container
 docker rm -f prompt-check
 docker run -d --name prompt-check --restart unless-stopped \
-  -p 127.0.0.1:8002:8000 prompt-check-app:latest
+  -p 127.0.0.1:8002:8000 \
+  --memory 1280m --memory-swap 1600m \
+  prompt-check-app:latest
 ```
+
+> **Penting 0 — batas memori 1280 MB itu wajib, jangan diturunkan.**
+> Diukur: torch import 311 MB → +DeBERTa loaded+infer **821 MB** → +MarianMT
+> **1139 MB**. Batas lama 384 MB (dari `VPS/anti-oom.md`) tidak pernah cukup untuk
+> batch 52 teks dan memicu OOM-kill tiap request multilingual → 502 HTML →
+> error `Unexpected token '<'` di browser. Kalau `docker update` dipakai, nilainya
+> hilang saat container di-recreate — jadi tulis ulang flag `--memory` di `docker run`.
 
 > **Penting 1**: `webapp/Dockerfile` asli repo memasang `torch` default yang menarik paket CUDA
 > (~3 GB) dan membuat build gagal di VPS ini (disk kecil). Selalu gunakan `webapp/Dockerfile.deploy`
