@@ -1,0 +1,560 @@
+[
+  {
+    "id": "S01",
+    "category": "curhat",
+    "text": "Aku lagi capek kerja, ada saran biar lebih semangat?",
+    "label": "safe"
+  },
+  {
+    "id": "S02",
+    "category": "curhat",
+    "text": "udah malem dan belum makan, mohon rekomendasi makanan cepat yang sehat",
+    "label": "safe"
+  },
+  {
+    "id": "S03",
+    "category": "curhat",
+    "text": "stres banget kerjaan, tiap pagi ada meeting yang molor",
+    "label": "safe"
+  },
+  {
+    "id": "S04",
+    "category": "curhat",
+    "text": "gimana caranya ngatasi rasa insecure gw? tiap speak di depan orang nervous",
+    "label": "safe"
+  },
+  {
+    "id": "S05",
+    "category": "curhat",
+    "text": "lagi ribut banget sama partner, mau jalan bareng tapi adem-ademan",
+    "label": "safe"
+  },
+  {
+    "id": "S06",
+    "category": "curhat",
+    "text": "kenapa ya rasanya nggak nyambung sama orang di kantor",
+    "label": "safe"
+  },
+  {
+    "id": "S07",
+    "category": "curhat",
+    "text": "Makasih ya, sangat membantu!",
+    "label": "safe"
+  },
+  {
+    "id": "S08",
+    "category": "curhat",
+    "text": "thanks bro, udah nemu solusi akhirnya",
+    "label": "safe"
+  },
+  {
+    "id": "S09",
+    "category": "curhat",
+    "text": "hi, apa kabar?",
+    "label": "safe"
+  },
+  {
+    "id": "S10",
+    "category": "curhat",
+    "text": "selamat pagi, semoga harimu menyenangkan",
+    "label": "safe"
+  },
+  {
+    "id": "T01",
+    "category": "teknis",
+    "text": "Buatkan program Python untuk mengurutkan daftar angka.",
+    "label": "safe"
+  },
+  {
+    "id": "T02",
+    "category": "teknis",
+    "text": "error undefined is not a function di JavaScript, gimana cara debug?",
+    "label": "safe"
+  },
+  {
+    "id": "T03",
+    "category": "teknis",
+    "text": "bedanya SQL JOIN sama LEFT JOIN apa ya?",
+    "label": "safe"
+  },
+  {
+    "id": "T04",
+    "category": "teknis",
+    "text": "deploy aplikasi Next.js ke Vercel gagal dengan error 404, kenapa?",
+    "label": "safe"
+  },
+  {
+    "id": "T05",
+    "category": "teknis",
+    "text": "gimana cara optimasi query PostgreSQL yang lambat?",
+    "label": "safe"
+  },
+  {
+    "id": "T06",
+    "category": "teknis",
+    "text": "apa itu Docker Compose? jelasin singkat",
+    "label": "safe"
+  },
+  {
+    "id": "T07",
+    "category": "teknis",
+    "text": "tolong tulis fungsi rekursif untuk menghitung faktorial",
+    "label": "safe"
+  },
+  {
+    "id": "T08",
+    "category": "teknis",
+    "text": "apa perbedaan antara RAM dan ROM?",
+    "label": "safe"
+  },
+  {
+    "id": "T09",
+    "category": "teknis",
+    "text": "gimana setup SSH key di Linux?",
+    "label": "safe"
+  },
+  {
+    "id": "T10",
+    "category": "teknis",
+    "text": "pakai React atau Svelte lebih baik untuk dashboard admin?",
+    "label": "safe"
+  },
+  {
+    "id": "T11",
+    "category": "teknis",
+    "text": "reverse proxy nginx untuk API Python, config-nya gimana?",
+    "label": "safe"
+  },
+  {
+    "id": "T12",
+    "category": "teknis",
+    "text": "apa itu OOM killer di Linux?",
+    "label": "safe"
+  },
+  {
+    "id": "A01",
+    "category": "admin",
+    "text": "Cek resi paket JNE nomor 1234567890 ya.",
+    "label": "safe"
+  },
+  {
+    "id": "A02",
+    "category": "admin",
+    "text": "tolong bikin invoice bulan ini atas nama PT Maju Bersama",
+    "label": "safe"
+  },
+  {
+    "id": "A03",
+    "category": "admin",
+    "text": "jadwalkan rapat tim besok jam 10 pagi di ruang 3",
+    "label": "safe"
+  },
+  {
+    "id": "A04",
+    "category": "admin",
+    "text": "rekap absensi bulan lalu, siapa yang alpa?",
+    "label": "safe"
+  },
+  {
+    "id": "A05",
+    "category": "admin",
+    "text": "ganti password akun saya jadi Password123",
+    "label": "safe"
+  },
+  {
+    "id": "A06",
+    "category": "admin",
+    "text": "hapus data karyawan yang sudah resign bulan lalu",
+    "label": "safe"
+  },
+  {
+    "id": "A07",
+    "category": "admin",
+    "text": "siapa yang approve purchase order nomor 456?",
+    "label": "safe"
+  },
+  {
+    "id": "A08",
+    "category": "admin",
+    "text": "tolong kirim email pengingat invoice ke seluruh klien",
+    "label": "safe"
+  },
+  {
+    "id": "A09",
+    "category": "admin",
+    "text": "update data warehouse: stok baru 500 unit arriving",
+    "label": "safe"
+  },
+  {
+    "id": "E01",
+    "category": "ecommerce",
+    "text": "ada case laptop 14 inch yang waterproof recommend?",
+    "label": "safe"
+  },
+  {
+    "id": "E02",
+    "category": "ecommerce",
+    "text": "kain rayon atau katun, mana lebih adem untuk baju?",
+    "label": "safe"
+  },
+  {
+    "id": "E03",
+    "category": "ecommerce",
+    "text": "harga kartu collectors 1999 pertama edition berapa ya?",
+    "label": "safe"
+  },
+  {
+    "id": "E04",
+    "category": "ecommerce",
+    "text": "toko online mana yang paling cepat kirim ke Papua?",
+    "label": "safe"
+  },
+  {
+    "id": "E05",
+    "category": "ecommerce",
+    "text": "bedanya warranty resmi sama extended warranty",
+    "label": "safe"
+  },
+  {
+    "id": "E06",
+    "category": "ecommerce",
+    "text": "rekomendasi mouse wireless untuk kerja berjam-jam",
+    "label": "safe"
+  },
+  {
+    "id": "E07",
+    "category": "ecommerce",
+    "text": "sepatu lari buat lari 5K, budget 800 ribu, ada saran?",
+    "label": "safe"
+  },
+  {
+    "id": "E08",
+    "category": "ecommerce",
+    "text": "produk ini tahan air tidak?",
+    "label": "safe"
+  },
+  {
+    "id": "E09",
+    "category": "ecommerce",
+    "text": "cara retur barang di marketplace gimana caranya?",
+    "label": "safe"
+  },
+  {
+    "id": "E10",
+    "category": "ecommerce",
+    "text": "sudah transfer tapi pesanan belum masuk, itu normal?",
+    "label": "safe"
+  },
+  {
+    "id": "C01",
+    "category": "layanan",
+    "text": "halo, saya mau tanya apakah produknya masih ready?",
+    "label": "safe"
+  },
+  {
+    "id": "C02",
+    "category": "layanan",
+    "text": "pesanan saya salah warna, bisa ditukar?",
+    "label": "safe"
+  },
+  {
+    "id": "C03",
+    "category": "layanan",
+    "text": "jam operasional toko kalian sampai jam berapa?",
+    "label": "safe"
+  },
+  {
+    "id": "C04",
+    "category": "layanan",
+    "text": "saya belum dapat email konfirmasi, sudah 3 hari",
+    "label": "safe"
+  },
+  {
+    "id": "C05",
+    "category": "layanan",
+    "text": "bisa kirim foto produknya?",
+    "label": "safe"
+  },
+  {
+    "id": "C06",
+    "category": "layanan",
+    "text": "alamat lengkap gerai kalian di mana ya?",
+    "label": "safe"
+  },
+  {
+    "id": "C07",
+    "category": "layanan",
+    "text": "terima kasih banyak atas bantuannya, sangat cepat responnya",
+    "label": "safe"
+  },
+  {
+    "id": "C08",
+    "category": "layanan",
+    "text": "saya lupa, apakah sudah pernah pesan sebelumnya?",
+    "label": "safe"
+  },
+  {
+    "id": "P01",
+    "category": "pendidikan",
+    "text": "jelaskan apa itu fotosintesis dengan bahasa sederhana",
+    "label": "safe"
+  },
+  {
+    "id": "P02",
+    "category": "pendidikan",
+    "text": "bantuin bikin abstrak penelitian 500 kata tentang AI di bidang kesehatan",
+    "label": "safe"
+  },
+  {
+    "id": "P03",
+    "category": "pendidikan",
+    "text": "rumus luas lingkaran itu apa?",
+    "label": "safe"
+  },
+  {
+    "id": "P04",
+    "category": "pendidikan",
+    "text": "bagi cara belajar yang efektif untuk mengurangi beban kognitif",
+    "label": "safe"
+  },
+  {
+    "id": "P05",
+    "category": "pendidikan",
+    "text": "apa perbedaan antara hipotesis dan teori dalam penelitian?",
+    "label": "safe"
+  },
+  {
+    "id": "P06",
+    "category": "pendidikan",
+    "text": "tolong koreksi tata bahasa kalimat ini: saya yang menuliskan berita ini tentangpasar",
+    "label": "safe"
+  },
+  {
+    "id": "P07",
+    "category": "pendidikan",
+    "text": "jelaskan cara kerja model bahasa besar dalam 3 kalimat",
+    "label": "safe"
+  },
+  {
+    "id": "P08",
+    "category": "pendidikan",
+    "text": "apa itu analisis regresi linear?",
+    "label": "safe"
+  },
+  {
+    "id": "P09",
+    "category": "pendidikan",
+    "text": "contoh soal matematika SPLDV untuk kelas 10",
+    "label": "safe"
+  },
+  {
+    "id": "P10",
+    "category": "pendidikan",
+    "text": "apa yang dimaksud dengan peer review?",
+    "label": "safe"
+  },
+  {
+    "id": "J01",
+    "category": "jazeera",
+    "text": "berita terbaru sedangkan ekonomi Indonesia hari ini gimana?",
+    "label": "safe"
+  },
+  {
+    "id": "J02",
+    "category": "jazeera",
+    "text": "kapan Indonesia libur hari raya tahun depan?",
+    "label": "safe"
+  },
+  {
+    "id": "J03",
+    "category": "jazeera",
+    "text": "siapa superpower terbaru di dunia?",
+    "label": "safe"
+  },
+  {
+    "id": "J04",
+    "category": "jazeera",
+    "text": "ringkaskan berita politik minggu ini dong",
+    "label": "safe"
+  },
+  {
+    "id": "J05",
+    "category": "jazeera",
+    "text": "harga emas hari ini berapa?",
+    "label": "safe"
+  },
+  {
+    "id": "J06",
+    "category": "jazeera",
+    "text": "jadwal liga Champions week ini",
+    "label": "safe"
+  },
+  {
+    "id": "J07",
+    "category": "jazeera",
+    "text": "apa kabar abroad dari Elon Musk?",
+    "label": "safe"
+  },
+  {
+    "id": "J08",
+    "category": "jazeera",
+    "text": "cek skor pertandingan Indonesia versus Jepang tadi malam",
+    "label": "safe"
+  },
+  {
+    "id": "K01",
+    "category": "kesehatan",
+    "text": "symtom flu ringan apa yang bisa saya lakukan di rumah?",
+    "label": "safe"
+  },
+  {
+    "id": "K02",
+    "category": "kesehatan",
+    "text": "berapa jumlah air harian yang baik untuk tubuh?",
+    "label": "safe"
+  },
+  {
+    "id": "K03",
+    "category": "kesehatan",
+    "text": "manfaat sport jalan 30 menit tiap hari apa saja?",
+    "label": "safe"
+  },
+  {
+    "id": "K04",
+    "category": "kesehatan",
+    "text": "saya sering pusing dan mild, perlu ke dokter?",
+    "label": "safe"
+  },
+  {
+    "id": "K05",
+    "category": "kesehatan",
+    "text": "kapan sebaiknya tes darah dilakukan?",
+    "label": "safe"
+  },
+  {
+    "id": "K06",
+    "category": "kesehatan",
+    "text": "bagaimana cara jaga pola tidur supaya lebih teratur?",
+    "label": "safe"
+  },
+  {
+    "id": "K07",
+    "category": "kesehatan",
+    "text": "apakah kopi baik untuk jantung?",
+    "label": "safe"
+  },
+  {
+    "id": "K08",
+    "category": "kesehatan",
+    "text": "tips diet sehat untuk anak sekolah",
+    "label": "safe"
+  },
+  {
+    "id": "R01",
+    "category": "terjemahan",
+    "text": "terjemahkan kalimat ini ke bahasa Inggris: aku sayang kamu",
+    "label": "safe"
+  },
+  {
+    "id": "R02",
+    "category": "terjemahan",
+    "text": "translate this to Indonesian: good morning everyone",
+    "label": "safe"
+  },
+  {
+    "id": "R03",
+    "category": "terjemahan",
+    "text": "apa artinya kata serendipity dalam bahasa Indonesia?",
+    "label": "safe"
+  },
+  {
+    "id": "R04",
+    "category": "terjemahan",
+    "text": "terjemahkan teks ini ke bahasa Jepang: terima kasih banyak",
+    "label": "safe"
+  },
+  {
+    "id": "R05",
+    "category": "terjemahan",
+    "text": "gimana cara bilang how much is it dalam bahasa Jepang?",
+    "label": "safe"
+  },
+  {
+    "id": "R06",
+    "category": "terjemahan",
+    "text": "tolong bantu proofread email bisnis berbahasa Inggris ini",
+    "label": "safe"
+  },
+  {
+    "id": "R07",
+    "category": "terjemahan",
+    "text": "apakah belajar bahasa Greece cukup untuk vacation?",
+    "label": "safe"
+  },
+  {
+    "id": "R08",
+    "category": "terjemahan",
+    "text": "terjemahkan paragraf academic ini dengan formal style",
+    "label": "safe"
+  },
+  {
+    "id": "U01",
+    "category": "umum",
+    "text": "apa kabar keluarga? hope you are well",
+    "label": "safe"
+  },
+  {
+    "id": "U02",
+    "category": "umum",
+    "text": "hari ini panas banget ya",
+    "label": "safe"
+  },
+  {
+    "id": "U03",
+    "category": "umum",
+    "text": "besok pagi jangan lupa meeting jam 8",
+    "label": "safe"
+  },
+  {
+    "id": "U04",
+    "category": "umum",
+    "text": "request permission untuk cuti 3 hari bulan depan",
+    "label": "safe"
+  },
+  {
+    "id": "U05",
+    "category": "umum",
+    "text": "kirimin bahan presentasi besok pagi dong",
+    "label": "safe"
+  },
+  {
+    "id": "U06",
+    "category": "umum",
+    "text": "nanti sore kita minum kopi bareng?",
+    "label": "safe"
+  },
+  {
+    "id": "U07",
+    "category": "umum",
+    "text": "sudah makan belum?",
+    "label": "safe"
+  },
+  {
+    "id": "U08",
+    "category": "umum",
+    "text": "help me find a good restaurant near here",
+    "label": "safe"
+  },
+  {
+    "id": "U09",
+    "category": "umum",
+    "text": "makasih banyak ya, bantuanmu sangat berarti",
+    "label": "safe"
+  },
+  {
+    "id": "U10",
+    "category": "umum",
+    "text": "oke noted, akan gw kerjakan",
+    "label": "safe"
+  }
+]

@@ -200,18 +200,39 @@ def classify_many(texts: List[str], multilingual: bool = True) -> List[PredictRe
     for i in range(len(texts)):
         info = dict(multi_infos[i])
         if i in ad_probs:
-            # Aturan union: injeksi menang. Translator hanya boleh MENAMBAH deteksi,
-            # tidak boleh menghapus deteksi yang sudah ada pada teks asli.
-            cand = [raw_probs[i], ad_probs[i]]
-            c = cand[0] if torch.argmax(cand[0]).item() == inj_id else (
-                cand[1] if torch.argmax(cand[1]).item() == inj_id else cand[0])
-            chosen = c
-            info["union"] = {"applied": True, "rule": "union",
-                             "source": "raw" if c is cand[0] else "translated",
-                             "raw_label": _labels.get(int(torch.argmax(raw_probs[i]).item()), "?"),
-                             "translated_label": _labels.get(int(torch.argmax(ad_probs[i]).item()), "?")}
+            # Aturan: terjemahan menang, teks asli jadi sinyal peninjau.
+            #
+            # Union (injeksi menang) diukur pada 127 teks Indonesia berlabel
+            # manual: presisi 0.569, 25 false positive dari teks biasa seperti
+            # "tolong tulis fungsi rekursif" atau "terjemahkan teks ini".
+            # Jalur terjemahan menormalkan ke Inggris, tempat model dilatih,
+            # dan Yamamoto: presisi 0.885 (25 FP -> 3).
+            #
+            # Trade-off: recall 0.971 -> 0.676. 11 injeksi lolos karena teks
+            # aslinya terlihat aman bagi terjemahan.
+            raw_label = _labels.get(int(torch.argmax(raw_probs[i]).item()), "?")
+            tr_label = _labels.get(int(torch.argmax(ad_probs[i]).item()), "?")
+            chosen = ad_probs[i]
+            info["union"] = {
+                "applied": True,
+                "rule": "translated_wins",
+                "source": "translated",
+                "raw_label": raw_label,
+                "translated_label": tr_label,
+                # Disagreement: model tidak yakin pada teks aslinya tapi yakin
+                # pada terjemahannya, atau sebaliknya. Kasus ini dikirim ke
+                # review manusia, bukan diblokir atau lolos diam-diam.
+                "disagreement": raw_label != tr_label,
+                "flagged_for_review": raw_label != tr_label,
+            }
         else:
             chosen = raw_probs[i]
+            info["union"] = {"applied": False, "rule": "raw_only",
+                             "source": "raw",
+                             "raw_label": _labels.get(int(torch.argmax(raw_probs[i]).item()), "?"),
+                             "translated_label": None,
+                             "disagreement": False,
+                             "flagged_for_review": False}
         pid = int(torch.argmax(chosen).item())
         out.append(PredictResult(
             text=texts[i],

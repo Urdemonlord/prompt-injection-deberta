@@ -343,7 +343,9 @@ fetch("/health").then(r=>r.json()).then(d=>{
 /* ---------- toggle multibahasa ---------- */
 // Default false: lapisan MT memuat MarianMT (~1.1 GB peak) dan sebelumnya
 // mencetuskan container ke OOM-kill -> 502 -> HTML -> "Unexpected token '<'".
-let mtEnabled=false;
+// MT harus aktif: aturan translated_wins hanya bekerja lewat jalur terjemahan.
+// Saat dimatikan, gate jatuh ke raw_only dan presisi turun ke 0.56.
+let mtEnabled=true;
 function syncMtUI(){
   document.querySelectorAll(".mtoggle").forEach(b=>{
     b.setAttribute("aria-pressed", mtEnabled?"true":"false");
