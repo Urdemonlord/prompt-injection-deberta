@@ -9,7 +9,7 @@ import json
 import re
 import urllib.parse
 import urllib.request
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 try:
     import mt_local
@@ -149,3 +149,47 @@ def adapt_multilingual(text: str, enabled: bool = True) -> Dict:
         "is_translated": is_translated,
         "status": status if is_translated else "passthrough",
     }
+
+
+def adapt_multilingual_many(texts: List[str], enabled: bool = True) -> List[Dict]:
+    """Versi batch dari adapt_multilingual.
+
+    Melewati jalur terjemahan untuk teks yang sudah Inggris (heuristik) — MarianMT
+    untuk teks EN menghasilkan passthrough yang sia-sia dan mahal. Hanya teks
+    ID yang diterjemahkan, dalam satu panggilan batch.
+    """
+    if not enabled:
+        return [adapt_multilingual(t, enabled=False) for t in texts]
+
+    idx = [i for i, t in enumerate(texts) if t and t.strip()]
+    result = [adapt_multilingual("", enabled=False) for _ in texts]
+    need = [i for i in idx if _heuristic_detect(texts[i]) == "id"]
+
+    translated_map = {}
+    if need and mt_local is not None and mt_local.local_available():
+        outs = mt_local.translate_many_to_en([texts[i] for i in need])
+        translated_map = {i: o for i, o in zip(need, outs) if o}
+
+    for i in idx:
+        lang_code = _heuristic_detect(texts[i])
+        tr = translated_map.get(i)
+        original = texts[i].strip()
+        if not tr or tr.lower() == original.lower():
+            result[i] = {
+                "original_text": original,
+                "adapted_text": original,
+                "detected_lang": lang_code,
+                "lang_name": LANG_MAP.get(lang_code, f"\U0001F310 {lang_code.upper()}"),
+                "is_translated": False,
+                "status": "local_mt_passthrough" if tr else "passthrough",
+            }
+            continue
+        result[i] = {
+            "original_text": original,
+            "adapted_text": tr,
+            "detected_lang": lang_code,
+            "lang_name": LANG_MAP.get(lang_code, f"\U0001F310 {lang_code.upper()}"),
+            "is_translated": True,
+            "status": "local_mt",
+        }
+    return result

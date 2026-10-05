@@ -39,7 +39,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from multilingual import adapt_multilingual
+from multilingual import adapt_multilingual, adapt_multilingual_many
 
 # ---------------------------------------------------------------------------
 # Konfigurasi
@@ -171,7 +171,7 @@ def _probs(texts: List[str]):
 def classify_many(texts: List[str], multilingual: bool = True) -> List[PredictResult]:
     if _model is None:
         raise HTTPException(503, "Model belum termuat. Periksa MODEL_PATH lalu restart server.")
-    multi_infos = [adapt_multilingual(t, enabled=multilingual) for t in texts]
+    multi_infos = adapt_multilingual_many(texts, enabled=multilingual)
     raw_clean = [preprocess(t) for t in texts]
 
     # Jalur terjemahan hanya dijalankan bila ada teks yang benar-benar diterjemahkan.
