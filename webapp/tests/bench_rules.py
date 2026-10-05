@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Bandingkan aturan keputusan (union / raw / translated) pada data berlabel asli.
 
-Sumber: val.csv (48.002 baris, balanced prompt_injection vs safe).
+Sumber: test.csv (56.473 baris held-out, nol overlap dengan val.csv).
+PERINGATAN: jangan pakai val.csv untuk evaluasi model -- itu split yang dipakai
+training, jadi F1 = 1.000 palsu (terukur: 2000/2000 benar).
 Tujuan: putuskan aturan mana yang benar-benar menang, bukan berdasarkan kasus tulisan tangan.
 
 Kenapa stratified + random: dataset balanced tapi hanya 99 baris ID-like, jadi
@@ -15,7 +17,7 @@ import sys
 import urllib.request
 
 URL = "http://127.0.0.1:8002"
-VAL = "/home/meowlabs/prompt-injection-deberta/val.csv"
+VAL = "/home/meowlabs/prompt-injection-deberta/test.csv"  # held-out, BUKAN val.csv
 
 # Kata umum ID — untuk mengelompokkan laporan, bukan untuk memutuskan label.
 ID_MARKERS = {
@@ -51,9 +53,9 @@ def sample(path, n, seed=13):
     return out
 
 
-def batch(texts):
-    """Kirim per chunk; server sub-batch 64 internally."""
-    body = json.dumps({"texts": texts, "multilingual": True}).encode()
+def batch(texts, multilingual=True):
+    """Kirim per chunk; server sub-batch INFER_BATCH internally."""
+    body = json.dumps({"texts": texts, "multilingual": multilingual}).encode()
     req = urllib.request.Request(URL + "/predict_batch", data=body,
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=1800) as r:
@@ -84,7 +86,7 @@ def main():
     rows = []
     CHUNK = args.chunk
     for i in range(0, len(texts), CHUNK):
-        rows.extend(batch(texts[i:i + CHUNK]))
+        rows.extend(batch(texts[i:i + CHUNK], multilingual=not args.no_mt))
         print(f"  {min(i+CHUNK, len(texts))}/{len(texts)}", file=sys.stderr)
     assert len(rows) == len(texts)
 
@@ -103,7 +105,9 @@ def main():
         u = (row.get("multilingual_info") or {}).get("union") or {}
         raw_l, tr_l = u.get("raw_label"), u.get("translated_label")
         # Tanpa union block = tidak ada terjemahan (passthrough / non-ID).
-        has_tr = u.get("applied") is True
+        # union block hanya ada bila adaptasi benar-benar dijalankan (teks ID).
+        # Teks EN: tidak ada block -> translated bukan sinyal, jangan dihakimi FN.
+        has_tr = u.get("applied") is True and u.get("translated_label") is not None
         raw_inj = inj(raw_l) if raw_l else inj(row["label"])
         tr_inj = inj(tr_l) if has_tr else None
         grp = "ID" if looks_indonesian(text) else "EN/other"

@@ -47,6 +47,7 @@ from multilingual import adapt_multilingual, adapt_multilingual_many
 MODEL_PATH = os.getenv("MODEL_PATH", "../best_model_biner")
 MAX_LENGTH = int(os.getenv("MAX_LENGTH", "192"))
 MAX_BATCH = int(os.getenv("MAX_BATCH", "512"))
+INFER_BATCH = int(os.getenv("INFER_BATCH", "8"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 DEFAULT_LABELS = {0: "safe", 1: "prompt injection"}
@@ -157,13 +158,21 @@ class PredictResult(BaseModel):
 # ---------------------------------------------------------------------------
 @torch.inference_mode()
 def _probs(texts: List[str]):
-    """Softmax probabilitas untuk sekumpulan teks (sub-batch agar hemat memori)."""
+    """Softmax probabilitas untuk sekumpulan teks (sub-batch agar hemat memori).
+
+    Sub-batch 8, bukan 64. DeBERTa-v3 memakai disentangled attention: matriks
+    attention ~(batch x heads x seq x seq). Dengan seq=192 dan batch 64, peak
+    anon-RSS mencapai 1299 MB dan kontainer kena OOM-kill (limit 1280 MB) --
+    bahkan tanpa lapisan terjemahan. Sub-batch 8 menjaga peak di bawah batas
+    dengan selisih throughput yang kecil.
+    """
     rows = []
-    for i in range(0, len(texts), 64):
-        chunk = texts[i:i + 64]
+    for i in range(0, len(texts), INFER_BATCH):
+        chunk = texts[i:i + INFER_BATCH]
         enc = _tokenizer(chunk, truncation=True, max_length=MAX_LENGTH,
                          padding=True, return_tensors="pt").to(DEVICE)
         rows.append(F.softmax(_model(**enc).logits, dim=-1))
+        del enc
     return torch.cat(rows, dim=0)
 
 
