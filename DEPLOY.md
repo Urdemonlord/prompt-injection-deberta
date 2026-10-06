@@ -85,24 +85,42 @@ curl -s -X POST https://promptcheck.meowlabs.id/predict \
 ## Lapisan multibahasa + translator self-hosted
 - Implementasi: `webapp/multilingual.py` (deteksi bahasa + orkestrasi) dan
   `webapp/mt_local.py` (backend terjemahan lokal).
-- Urutan backend di `translate_text()`:
-  1. **Lokal (MarianMT)** → `status="local_mt"` (dipakai sekarang)
-  2. Google Translate publik → `status="adapted"` (cadangan; dari IP VPS ini selalu 429)
-  3. Fallback heuristik → `status="offline_fallback"` (prediksi tetap jalan)
-- Model: `Helsinki-NLP/opus-mt-mul-en` (banyak bahasa → Inggris, ~310 MB), dimuat **lazy**
+- **Gate bahasa (commit `f8e1240`, 6 Okt 2026)**: MT hanya dipanggil kalau
+  `_heuristic_detect(text) == "id"`. Alasannya `opus-mt-mul-en` many-to-one
+  **tanpa token kode bahasa** (nol token `>>`), jadi dia menebak bahasa sumber
+  dari teks — menerjemahkan teks Inggris menghasilkan tebakan: `hai`→`yes`,
+  `hei`→`today`, `hai!`→`Come on!`. Cabang Google Translate juga sudah dihapus
+  (selalu 429 dari IP VPS ini); teks yang gagal MT tetap diklasifikasi apa adanya
+  dengan `status="passthrough"`.
+- Model: `Helsinki-NLP/opus-mt-mul-en` (banyak bahasa → Inggris, ~300 MB), dimuat **lazy**
   saat permintaan pertama (jadi `/health` awal menampilkan `loaded:false` itu normal).
 - Diatur lewat env: `MT_MODEL_PATH` (default `/app/mt_model`), `MT_LOCAL_ENABLED` (`1`),
-  `MT_MAX_NEW_TOKENS` (`256`).
-- **Catatan kosmetik**: `detected_lang` hanya membedakan `id`/`en` (heuristik kata kunci),
-  jadi teks Prancis/Jerman/dll tampil sebagai `en` walau terjemahannya benar.
+  `MT_MAX_NEW_TOKENS` (`64`), `MT_MAX_INPUT_TOKENS` (`192`), `MT_BATCH_SIZE` (`8`).
+- **Catatan kosmetik**: `detected_lang` hanya membedakan `id`/en (heuristik kata kunci),
+  jadi teks Prancis/Jerman/dll tampil sebagai `en` dan **tidak diterjemahkan** —
+  MT ini memang hanya andal untuk ID.
 - Frontend kini punya **toggle "Multibahasa"** (ikon globe + switch) di kedua tab
   (Satu teks & Batch/Berkas). Bila dimatikan, parameter `multilingual:false` dikirim ke API.
 - Panel pipeline menampilkan **step 0 "Adaptasi multibahasa"** (teks asli → hasil terjemahan);
   step 1 lalu menampilkan input yang benar-benar masuk praproses (hasil terjemahan bila ada).
 - Toggle otomatis **nonaktif** bila server tidak mengekspos `translation_backend` di `/health`.
-- **Aturan gabungan (union)**: teks dianggap injeksi bila teks **asli ATAU terjemahan** terdeteksi
-  injeksi. Translator hanya boleh menambah deteksi, tidak menghapus — mencegah *false negative*
-  akibat terjemahan yang mengubah makna. Field `multilingual_info.union` mencatat sumber prediksi.
+- **Aturan gabungan (union)**: teks dianggap injeksi bila terjemahan **ATAU** teks asli
+  terdeteksi injeksi pada `/analyze` (`rule: "union"`). Endpoint prediksi
+  (`/predict`, `/predict_batch`, `/predict_file`) memakai `rule: "translated_wins"`
+  — terjemahan menang, teks asli jadi sinyal `disagreement`/`flagged_for_review`
+  (presisi ID 0.569 → 0.885, recall 0.971 → 0.676; 127 teks berlabel manual).
+  Translator tidak boleh menghapus deteksi pada jalur `/analyze`.
+  Field `multilingual_info.union` mencatat sumber prediksi.
+
+## Test
+```bash
+cd webapp
+docker run --rm -v /home/meowlabs/prompt-injection-deberta:/repo -w /repo/webapp \
+  prompt-check-app:latest python tests/test_multilingual_gate.py   # gate bahasa
+MT=true python3 tests/eval_id_en.py                                # regresi ID/EN
+```
+Baseline `eval_id_en.py MT=true` (6 Okt 2026): `TP=13 FP=2 TN=6 FN=4`,
+precision=0.867 recall=0.765 f1=0.812. Ubah gate/MT/union → angka ini wajib sama.
 
 ## Pemeliharaan disk
 Image ~3.3 GB per versi. Jangan menyimpan backup lebih dari satu; setelah versi baru
