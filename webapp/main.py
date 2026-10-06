@@ -234,6 +234,17 @@ def classify_many(texts: List[str], multilingual: bool = True) -> List[PredictRe
                              "disagreement": False,
                              "flagged_for_review": False}
         pid = int(torch.argmax(chosen).item())
+        if pid == inj_id and _is_short_benign(texts[i]):
+            # Guard membalik label ke safe. TETAP laporkan probabilitas asli model
+            # (tanpa menimpa) — mengarang angka baru puts-consistency. Yang
+            # merepresentasikan label adalah flag guard, bukan angka karangan.
+            info["short_text_guard"] = {
+                "applied": True,
+                "model_label": _labels.get(inj_id, "?"),
+                "model_confidence": round(float(chosen[inj_id]), 4),
+                "reason": "short_text_no_injection_signal",
+            }
+            pid = 1 - inj_id
         out.append(PredictResult(
             text=texts[i],
             label=_labels.get(pid, f"kelas {pid}"),
@@ -336,6 +347,49 @@ def _inj_id() -> int:
     return max(_labels) if _labels else 1
 
 
+# Kata ganti "prompt injection" yang sering muncul di serangan pendek. Dipakai
+# hanya oleh _is_short_benign() — bukan filter umum, bukan pengganti model.
+SHORT_INJECTION_WORDS = re.compile(
+    r"ignore|disregard|forget|override|bypass|jailbreak|dan\b|dude\b|no\s*filter|"
+    r"system|prompt|instruction|rule|reveal|disclose|leak|spill|secret|hidden|"
+    r"pretend|admin|password|token|confidential|verbatim|commence|rebegin|reset|"
+    r"logic|truth|bulletin|predisjunct|afresh|anew|forsake|unveil|share|"
+    # lintas bahasa: model dilatih pada korpus multilingual
+    r"abaikan|perintah|rahasia|aturan|sistem|rahasiakan|"
+    r"無視|秘密|命令|法令|システム|忘掉|"
+    r"ignorar|olvida|vergiss|oublie|zapomnij|忽略|指示|系统",
+    re.IGNORECASE)
+
+SHORT_MAX_WORDS = int(os.getenv("SHORT_MAX_WORDS", "3"))
+SHORT_SYMBOL_RATIO = float(os.getenv("SHORT_SYMBOL_RATIO", "0.30"))
+
+
+def _is_short_benign(text: str) -> bool:
+    """True bila teks pendek TANPA sinyal injeksi — biarkan yang lolos ke model.
+
+    Model dilatih dengan short-injection yang didominasi emoji-soup dan fragmen
+    terpotong, sedangkan short-safe di data hanya bergaya " imperative task "
+    (mis. "design a company logo"). Teks percakapan singkat tidak pernah ada di
+    training set, jadi model menebak "pendek = aneh" dan men-flag sapaan biasa:
+    "hai" 0.97, "bye" 1.00, "hello" 0.65, "zzz" 1.00.
+
+    Guard ini menutup celah itu BUKAN melaporkan aman — teks yang lolos guard tetap
+    di-forward ke model dan label aslinya dipertahankan kalau model yakin.
+    """
+    t = (text or "").strip()
+    if not t:
+        return False
+    if len(t.split()) > SHORT_MAX_WORDS:
+        return False
+    if SHORT_INJECTION_WORDS.search(t):
+        return False
+    chars = [c for c in t if not c.isspace()]
+    if not chars:
+        return False
+    symbol_ratio = sum(1 for c in chars if not c.isalnum()) / len(chars)
+    return symbol_ratio <= SHORT_SYMBOL_RATIO
+
+
 def _pick_union(probs, cands, inj_id):
     """Pilih kandidat pemenang dengan aturan union.
 
@@ -409,6 +463,28 @@ def analyze(req: PredictRequest):
     else:
         chosen, source = pred_clean, "translated"
 
+    # --- #5 Guard teks pendek (sama seperti /predict) ---
+    #
+    # Guard membalik label ke safe TETAP probabilitas asli model tidak ditimpa.
+    # Pada softmax 2-kelas, 1 - p(injection) == p(safe) secara identik, jadi
+    # "confidence aman yang meyakinkan" tidak bisa dihitung tanpa mengarang angka.
+    # Yang kejujuran: tampilkan confidence = p(safe) asli, dan biarkan UI
+    # menjelaskan koreksinya lewat short_guard.model_confidence.
+    short_guard = {"applied": False}
+    if chosen["label"] == inj_label and _is_short_benign(text):
+        safe_id = 1 - inj_id
+        short_guard = {
+            "applied": True,
+            "model_label": inj_label,
+            "model_confidence": chosen["confidence"],
+            "reason": "short_text_no_injection_signal",
+        }
+        chosen = {
+            "label": _labels.get(safe_id, "safe"),
+            "confidence": chosen["probabilities"].get(_labels.get(safe_id), 0.0),
+            "probabilities": chosen["probabilities"],
+        }
+
     # --- #2 Attention [CLS] -> token (rata-rata head, lapisan terakhir) ---
     attention = []
     try:
@@ -452,6 +528,7 @@ def analyze(req: PredictRequest):
         "pred_raw": pred_raw,
         "pred_clean": pred_clean,
         "pred_final_source": source,
+        "short_text_guard": short_guard,
         "preproc_changed_prediction": pred_raw["label"] != pred_clean["label"],
         "attention": attention,
         "importance": importance,

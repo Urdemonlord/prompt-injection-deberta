@@ -224,7 +224,7 @@
       </span>
       <div>
         <div class="name">PromptGuard</div>
-        <div class="tag">Prompt Injection Detector</div>
+        <div class="tag">Deteksi Prompt Injection</div>
       </div>
     </div>
     <div class="nav-right">
@@ -547,6 +547,14 @@ function renderOne(d,ms){
     probs+=`<div class="probline"><span>${k}</span><b>${p}%</b></div>
             <div class="bar"><span style="width:${p}%;background:${dg?'var(--danger)':'var(--safe)'}"></span></div>`;
   }
+  // Koreksi guard teks pendek: bar di bawah adalah output model SEBELUM guard,
+  // jadi tampilkan eksplisit kalau label akhir berbeda dari label model.
+  const sg=d.short_text_guard||((d.multilingual||{}).short_text_guard)||null;
+  const guarded=!!(sg&&sg.applied);
+  const confLabel=guarded?'keyakinan model':'keyakinan';
+  const guardNote=(sg&&sg.applied)?`<div class="warn" style="border-color:var(--safe);background:color-mix(in srgb,var(--safe) 10%,transparent);margin-top:14px">
+      🛡 <b>Dikoreksi guard teks pendek.</b> Model menandai <b>${esc(sg.model_label||"prompt injection")} ${((sg.model_confidence||0)*100).toFixed(2)}%</b>, teksnya terlalu pendek untuk dinilai bermuatan serangan — pola di data latihan hanya berisi cuplikan aneh dan emoji, bukan percakapan singkat.
+      Angka di bawah tetap <b>output mentah model</b>; label <b>${esc(d.label)}</b> berasal dari guard.</div>`:'';
   $("result").innerHTML=`
     <div class="verdict">
       <div class="gauge">
@@ -555,7 +563,7 @@ function renderOne(d,ms){
           <circle class="g-fill" cx="60" cy="60" r="52" stroke="${col}"
                   stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"></circle>
         </svg>
-        <div class="center"><div class="pct" style="color:${col}">${pct}%</div><div class="lbl">keyakinan</div></div>
+        <div class="center"><div class="pct" style="color:${col}">${pct}%</div><div class="lbl">${confLabel}</div></div>
       </div>
       <div class="vinfo">
         <span class="badge ${inj?'danger':'safe'}">
@@ -566,6 +574,7 @@ function renderOne(d,ms){
         <div class="probs">${probs}</div>
       </div>
     </div>
+    ${guardNote}
     <div class="note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span>Diproses dalam ${ms} ms. Nilai keyakinan adalah probabilitas softmax yang <b>belum terkalibrasi</b>, sehingga angka tinggi belum tentu berarti prediksi pasti benar.</span>
